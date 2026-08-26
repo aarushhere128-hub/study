@@ -194,7 +194,11 @@ function calculatePriority(chapter) {
     // 1. WEAKNESS
     // --------------------------------
 
+    if (chapter.strength === 0) {
+    score += 5;
+} else {
     score += (6 - chapter.strength) * 10;
+    }
 
 
     // --------------------------------
@@ -936,18 +940,13 @@ function renderChapters() {
 
 
             const strengthText = {
-
-                1: "Very Weak",
-
-                2: "Weak",
-
-                3: "Okay",
-
-                4: "Strong",
-
-                5: "Mastered"
-
-            }[chapter.strength];
+    0: "Not Started",
+    1: "Very Weak",
+    2: "Weak",
+    3: "Okay",
+    4: "Strong",
+    5: "Mastered"
+}[chapter.strength];
 
 
             div.innerHTML = `
