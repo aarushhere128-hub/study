@@ -28,6 +28,15 @@
 
         <div id="recommendation" class="recommendation hidden"></div>
     </section>
+    <section class="card hero">
+    <h2>What should I test?</h2>
+
+    <button onclick="getTestRecommendation()">
+        Recommend a Test
+    </button>
+
+    <div id="testRecommendation" class="recommendation hidden"></div>
+    </section>
 
 
     <!-- ADD SUBJECT -->
@@ -70,25 +79,38 @@
 
     <!-- ADD TEST -->
     <section class="card">
-        <h2>Add / Record Test</h2>
+    <section class="card">
+    <h2>Add / Record Test</h2>
 
-        <select id="testSubject"></select>
+    <select id="testSubject"></select>
 
-        <select id="testChapter"></select>
+    <select id="testChapter"></select>
 
-        <label>Test date</label>
-        <input id="testDate" type="date">
+    <label>Test date</label>
+    <input id="testDate" type="date">
 
-        <label>Score (optional)</label>
-        <input id="testScore"
-               type="number"
-               min="0"
-               max="100"
-               placeholder="e.g. 78">
+    <label>Score (optional)</label>
+    <input
+        id="testScore"
+        type="number"
+        min="0"
+        max="100"
+        placeholder="e.g. 78"
+    >
 
-        <button onclick="addTest()">Save Test</button>
+    <label>Mistakes</label>
+    <input
+        id="testMistakes"
+        type="number"
+        min="0"
+        placeholder="Number of mistakes"
+    >
 
-        <div id="testsList"></div>
+    <button onclick="addTest()">
+        Save Test
+    </button>
+
+    <div id="testsList"></div>
     </section>
 
 
