@@ -139,3 +139,8 @@ select {
 .good {
     color: #27ae60;
 }
+.delete-btn {
+    background: #c0392b;
+    padding: 7px 12px;
+    font-size: 13px;
+}
