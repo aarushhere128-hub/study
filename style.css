@@ -1,0 +1,141 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: #f4f6f8;
+    color: #222;
+    padding: 30px 15px;
+}
+
+.container {
+    max-width: 900px;
+    margin: auto;
+}
+
+header {
+    margin-bottom: 25px;
+}
+
+header h1 {
+    font-size: 32px;
+    margin-bottom: 5px;
+}
+
+header p {
+    color: #666;
+}
+
+.card {
+    background: white;
+    padding: 22px;
+    margin-bottom: 20px;
+    border-radius: 12px;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+}
+
+.card h2 {
+    margin-bottom: 15px;
+}
+
+.hero {
+    text-align: center;
+}
+
+.session-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+button {
+    border: none;
+    padding: 11px 18px;
+    border-radius: 8px;
+    background: #333;
+    color: white;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+button:hover {
+    opacity: 0.85;
+}
+
+input,
+select {
+    width: 100%;
+    padding: 11px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 7px;
+    font-size: 14px;
+}
+
+.form-row {
+    display: flex;
+    gap: 10px;
+}
+
+.form-row input {
+    flex: 1;
+}
+
+.form-row button {
+    height: 42px;
+}
+
+.item {
+    border: 1px solid #ddd;
+    padding: 12px;
+    border-radius: 8px;
+    margin-top: 10px;
+}
+
+.item strong {
+    display: block;
+    margin-bottom: 4px;
+}
+
+.small {
+    font-size: 13px;
+    color: #666;
+}
+
+.recommendation {
+    margin-top: 20px;
+    padding: 20px;
+    border-radius: 10px;
+    background: #eef2ff;
+    text-align: left;
+}
+
+.recommendation h3 {
+    margin-bottom: 8px;
+}
+
+.recommendation .reason {
+    margin-top: 10px;
+    color: #555;
+    line-height: 1.5;
+}
+
+.hidden {
+    display: none;
+}
+
+.danger {
+    color: #c0392b;
+}
+
+.warning {
+    color: #d68910;
+}
+
+.good {
+    color: #27ae60;
+}
