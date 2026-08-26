@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Engine</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="container">
+
+    <header>
+        <h1>Study Engine</h1>
+        <p>Your personal "What should I study?" system.</p>
+    </header>
+
+    <!-- RECOMMENDATION -->
+    <section class="card hero">
+        <h2>What should I study?</h2>
+
+        <div class="session-buttons">
+            <button onclick="getRecommendation('primary')">Primary</button>
+            <button onclick="getRecommendation('secondary')">Secondary</button>
+            <button onclick="getRecommendation('tertiary')">Tertiary</button>
+        </div>
+
+        <div id="recommendation" class="recommendation hidden"></div>
+    </section>
+
+
+    <!-- ADD SUBJECT -->
+    <section class="card">
+        <h2>Add Subject</h2>
+
+        <div class="form-row">
+            <input id="subjectName" type="text" placeholder="Subject name">
+            <button onclick="addSubject()">Add</button>
+        </div>
+
+        <div id="subjectsList"></div>
+    </section>
+
+
+    <!-- ADD CHAPTER -->
+    <section class="card">
+        <h2>Add Chapter</h2>
+
+        <select id="chapterSubject"></select>
+
+        <input id="chapterName"
+               type="text"
+               placeholder="Chapter name">
+
+        <select id="chapterStrength">
+            <option value="1">Very Weak</option>
+            <option value="2">Weak</option>
+            <option value="3" selected>Okay</option>
+            <option value="4">Strong</option>
+            <option value="5">Mastered</option>
+        </select>
+
+        <button onclick="addChapter()">Add Chapter</button>
+
+        <div id="chaptersList"></div>
+    </section>
+
+
+    <!-- ADD TEST -->
+    <section class="card">
+        <h2>Add / Record Test</h2>
+
+        <select id="testSubject"></select>
+
+        <select id="testChapter"></select>
+
+        <label>Test date</label>
+        <input id="testDate" type="date">
+
+        <label>Score (optional)</label>
+        <input id="testScore"
+               type="number"
+               min="0"
+               max="100"
+               placeholder="e.g. 78">
+
+        <button onclick="addTest()">Save Test</button>
+
+        <div id="testsList"></div>
+    </section>
+
+
+    <!-- LOG STUDY -->
+    <section class="card">
+        <h2>Log Study Session</h2>
+
+        <select id="studySubject"></select>
+
+        <select id="studyChapter"></select>
+
+        <input id="studyDuration"
+               type="number"
+               placeholder="Duration in minutes">
+
+        <select id="studySession">
+            <option value="primary">Primary</option>
+            <option value="secondary">Secondary</option>
+            <option value="tertiary">Tertiary</option>
+        </select>
+
+        <button onclick="logStudy()">Save Study Session</button>
+
+        <div id="historyList"></div>
+    </section>
+
+</div>
+
+<script src="app.js"></script>
+
+</body>
+</html>
