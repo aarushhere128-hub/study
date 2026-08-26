@@ -851,8 +851,6 @@ function logStudy() {
 
 
 // ---------- ADD TEST ----------
-
-function addTest() {
 function addTest() {
 
     const subjectId =
