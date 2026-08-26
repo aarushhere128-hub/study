@@ -277,7 +277,116 @@ function calculatePriority(chapter) {
     return score;
 }
 
+function calculateTestPriority(chapter) {
 
+    let score = 0;
+
+
+    // Never tested
+    const chapterTests =
+        tests.filter(
+            t => t.chapterId === chapter.id
+        );
+
+
+    if (chapterTests.length === 0) {
+
+        score += 30;
+
+    } else {
+
+        // Time since last test
+        const lastTest =
+            chapterTests
+                .slice()
+                .sort(
+                    (a, b) =>
+                        new Date(b.date) -
+                        new Date(a.date)
+                )[0];
+
+
+        const days =
+            daysBetween(
+                lastTest.date,
+                todayString()
+            );
+
+
+        score += Math.min(
+            days * 3,
+            30
+        );
+
+
+        // Poor previous score
+        if (
+            lastTest.score !== null &&
+            lastTest.score !== undefined
+        ) {
+
+            if (lastTest.score < 50) {
+                score += 35;
+            }
+
+            else if (lastTest.score < 70) {
+                score += 25;
+            }
+
+            else if (lastTest.score < 85) {
+                score += 10;
+            }
+        }
+    }
+
+
+    // Recently studied = good time to verify knowledge
+    if (chapter.lastStudied) {
+
+        const daysSinceStudy =
+            daysBetween(
+                chapter.lastStudied,
+                todayString()
+            );
+
+
+        if (daysSinceStudy <= 2) {
+            score += 20;
+        }
+
+        else if (daysSinceStudy <= 5) {
+            score += 10;
+        }
+    }
+
+
+    // Upcoming school test
+    const upcoming =
+        getNearestTest(chapter.id);
+
+
+    if (upcoming) {
+
+        const days =
+            daysUntil(upcoming.date);
+
+
+        if (days <= 1) {
+            score += 50;
+        }
+
+        else if (days <= 3) {
+            score += 35;
+        }
+
+        else if (days <= 7) {
+            score += 20;
+        }
+    }
+
+
+    return score;
+}
 // ---------- RANK ALL CHAPTERS ----------
 
 function rankChapters() {
@@ -357,7 +466,52 @@ function getRecommendation(session) {
     );
 }
 
+function getTestRecommendation() {
 
+    const ranked = [];
+
+
+    subjects.forEach(subject => {
+
+        subject.chapters.forEach(chapter => {
+
+            ranked.push({
+
+                subject: subject,
+
+                chapter: chapter,
+
+                score:
+                    calculateTestPriority(chapter)
+
+            });
+
+        });
+
+    });
+
+
+    if (ranked.length === 0) {
+
+        alert(
+            "Add subjects and chapters first."
+        );
+
+        return;
+    }
+
+
+    ranked.sort(
+        (a, b) =>
+            b.score - a.score
+    );
+
+
+    const result = ranked[0];
+
+
+    displayTestRecommendation(result);
+}
 // ---------- RECOMMENDATION DISPLAY ----------
 
 function displayRecommendation(result, session) {
@@ -473,7 +627,128 @@ function displayRecommendation(result, session) {
 
     box.classList.remove("hidden");
 }
+function displayTestRecommendation(result) {
 
+    const box =
+        document.getElementById(
+            "testRecommendation"
+        );
+
+
+    const chapter =
+        result.chapter;
+
+
+    const subject =
+        result.subject;
+
+
+    const chapterTests =
+        tests.filter(
+            t => t.chapterId === chapter.id
+        );
+
+
+    let reasons = [];
+
+
+    if (chapterTests.length === 0) {
+
+        reasons.push(
+            "You haven't tested this chapter yet."
+        );
+
+    } else {
+
+        const lastTest =
+            chapterTests
+                .slice()
+                .sort(
+                    (a, b) =>
+                        new Date(b.date) -
+                        new Date(a.date)
+                )[0];
+
+
+        if (
+            lastTest.score !== null &&
+            lastTest.score !== undefined
+        ) {
+
+            reasons.push(
+                `Your last score was ${lastTest.score}%.`
+            );
+        }
+    }
+
+
+    if (chapter.lastStudied) {
+
+        const days =
+            daysBetween(
+                chapter.lastStudied,
+                todayString()
+            );
+
+
+        if (days <= 2) {
+
+            reasons.push(
+                "You studied this recently, so it's a good candidate for testing."
+            );
+        }
+    }
+
+
+    const upcoming =
+        getNearestTest(chapter.id);
+
+
+    if (upcoming) {
+
+        const days =
+            daysUntil(upcoming.date);
+
+
+        reasons.push(
+            `You have a test in ${days} day${days === 1 ? "" : "s"}.`
+        );
+    }
+
+
+    box.innerHTML = `
+
+        <h3>
+            🧪 ${subject.name} — ${chapter.name}
+        </h3>
+
+        <p>
+            This is your highest-priority
+            chapter to test right now.
+        </p>
+
+        <div class="reason">
+
+            ${reasons.length
+                ? reasons.map(
+                    r => `• ${r}`
+                ).join("<br>")
+                : "This chapter is due for testing."
+            }
+
+        </div>
+
+        <br>
+
+        <strong>
+            Test priority: ${result.score}
+        </strong>
+
+    `;
+
+
+    box.classList.remove("hidden");
+}
 
 // ---------- LOG STUDY ----------
 
@@ -578,34 +853,26 @@ function logStudy() {
 // ---------- ADD TEST ----------
 
 function addTest() {
+function addTest() {
 
     const subjectId =
-        document.getElementById(
-            "testSubject"
-        ).value;
+        document.getElementById("testSubject").value;
 
     const chapterId =
-        document.getElementById(
-            "testChapter"
-        ).value;
+        document.getElementById("testChapter").value;
 
     const date =
-        document.getElementById(
-            "testDate"
-        ).value;
+        document.getElementById("testDate").value;
 
     const scoreInput =
-        document.getElementById(
-            "testScore"
-        ).value;
+        document.getElementById("testScore").value;
+
+    const mistakesInput =
+        document.getElementById("testMistakes").value;
 
 
     if (!subjectId || !chapterId || !date) {
-
-        alert(
-            "Subject, chapter and date are required."
-        );
-
+        alert("Subject, chapter and date are required.");
         return;
     }
 
@@ -614,6 +881,11 @@ function addTest() {
         scoreInput === ""
             ? null
             : Number(scoreInput);
+
+    const mistakes =
+        mistakesInput === ""
+            ? null
+            : Number(mistakesInput);
 
 
     tests.push({
@@ -626,52 +898,37 @@ function addTest() {
 
         date: date,
 
-        score: score
+        score: score,
+
+        mistakes: mistakes
 
     });
 
 
-    // If score was entered,
-    // update chapter score.
-
+    // Update chapter score
     if (score !== null) {
 
         const result =
             findChapter(chapterId);
 
         if (result) {
-            result.chapter.lastScore =
-                score;
+            result.chapter.lastScore = score;
         }
-
     }
 
 
-    saveData(
-        "tests",
-        tests
-    );
-
-    saveData(
-        "subjects",
-        subjects
-    );
+    saveData("tests", tests);
+    saveData("subjects", subjects);
 
 
-    document.getElementById(
-        "testDate"
-    ).value = "";
-
-    document.getElementById(
-        "testScore"
-    ).value = "";
+    document.getElementById("testDate").value = "";
+    document.getElementById("testScore").value = "";
+    document.getElementById("testMistakes").value = "";
 
 
     renderEverything();
 
-    alert(
-        "Test saved!"
-    );
+    alert("Test saved!");
 }
 function deleteSubject(subjectId) {
 
@@ -744,7 +1001,119 @@ function deleteChapter(chapterId) {
 
     renderEverything();
 }
+function deleteTest(testId) {
 
+    const test =
+        tests.find(t => t.id === testId);
+
+    if (!test) return;
+
+
+    const confirmed = confirm(
+        "Delete this test record?"
+    );
+
+    if (!confirmed) return;
+
+
+    tests = tests.filter(
+        t => t.id !== testId
+    );
+
+
+    // Recalculate last score for the chapter
+    const chapterTests =
+        tests
+            .filter(
+                t => t.chapterId === test.chapterId
+            )
+            .sort(
+                (a, b) =>
+                    new Date(b.date) -
+                    new Date(a.date)
+            );
+
+
+    const result =
+        findChapter(test.chapterId);
+
+
+    if (result) {
+
+        result.chapter.lastScore =
+            chapterTests.length > 0
+                ? chapterTests[0].score
+                : null;
+    }
+
+
+    saveData("tests", tests);
+    saveData("subjects", subjects);
+
+    renderEverything();
+}
+function deleteStudySession(entryId) {
+
+    const entry =
+        studyHistory.find(
+            e => e.id === entryId
+        );
+
+    if (!entry) return;
+
+
+    const confirmed = confirm(
+        "Delete this study session?"
+    );
+
+    if (!confirmed) return;
+
+
+    studyHistory =
+        studyHistory.filter(
+            e => e.id !== entryId
+        );
+
+
+    // Recalculate last studied date
+    const chapterHistory =
+        studyHistory
+            .filter(
+                e => e.chapterId === entry.chapterId
+            )
+            .sort(
+                (a, b) =>
+                    new Date(b.date) -
+                    new Date(a.date)
+            );
+
+
+    const result =
+        findChapter(entry.chapterId);
+
+
+    if (result) {
+
+        result.chapter.lastStudied =
+            chapterHistory.length > 0
+                ? chapterHistory[0].date
+                : null;
+    }
+
+
+    saveData(
+        "studyHistory",
+        studyHistory
+    );
+
+    saveData(
+        "subjects",
+        subjects
+    );
+
+
+    renderEverything();
+}
 // ---------- UPDATE CHAPTER DROPDOWNS ----------
 
 function updateChapterDropdown(
@@ -999,14 +1368,13 @@ function renderChapters() {
 function renderTests() {
 
     const container =
-        document.getElementById(
-            "testsList"
-        );
+        document.getElementById("testsList");
 
     container.innerHTML = "";
 
 
     tests
+        .slice()
         .sort(
             (a, b) =>
                 new Date(a.date) -
@@ -1015,19 +1383,13 @@ function renderTests() {
         .forEach(test => {
 
             const result =
-                findChapter(
-                    test.chapterId
-                );
+                findChapter(test.chapterId);
 
-            if (!result) {
-                return;
-            }
+            if (!result) return;
 
 
             const div =
-                document.createElement(
-                    "div"
-                );
+                document.createElement("div");
 
             div.className = "item";
 
@@ -1042,23 +1404,35 @@ function renderTests() {
 
                 <span class="small">
 
-                    Date:
-                    ${test.date}
+                    Date: ${test.date}
 
                     <br>
 
                     Score:
                     ${test.score !== null
                         ? test.score + "%"
-                        : "Not taken yet"}
+                        : "Not recorded"}
+
+                    <br>
+
+                    Mistakes:
+                    ${test.mistakes !== null
+                        ? test.mistakes
+                        : "Not recorded"}
 
                 </span>
 
+                <br><br>
+
+                <button
+                    class="delete-btn"
+                    onclick="deleteTest('${test.id}')">
+                    Delete Test
+                </button>
+
             `;
 
-            container.appendChild(
-                div
-            );
+            container.appendChild(div);
 
         });
 }
@@ -1069,9 +1443,7 @@ function renderTests() {
 function renderHistory() {
 
     const container =
-        document.getElementById(
-            "historyList"
-        );
+        document.getElementById("historyList");
 
     container.innerHTML = "";
 
@@ -1079,23 +1451,17 @@ function renderHistory() {
     studyHistory
         .slice()
         .reverse()
-        .slice(0, 10)
+        .slice(0, 20)
         .forEach(entry => {
 
             const result =
-                findChapter(
-                    entry.chapterId
-                );
+                findChapter(entry.chapterId);
 
-            if (!result) {
-                return;
-            }
+            if (!result) return;
 
 
             const div =
-                document.createElement(
-                    "div"
-                );
+                document.createElement("div");
 
             div.className = "item";
 
@@ -1118,11 +1484,18 @@ function renderHistory() {
 
                 </span>
 
+                <br><br>
+
+                <button
+                    class="delete-btn"
+                    onclick="deleteStudySession('${entry.id}')">
+                    Delete Session
+                </button>
+
             `;
 
-            container.appendChild(
-                div
-            );
+
+            container.appendChild(div);
 
         });
 }
