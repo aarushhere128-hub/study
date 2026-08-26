@@ -669,7 +669,77 @@ function addTest() {
         "Test saved!"
     );
 }
+function deleteSubject(subjectId) {
 
+    const subject = subjects.find(
+        s => s.id === subjectId
+    );
+
+    if (!subject) return;
+
+    const confirmed = confirm(
+        `Delete "${subject.name}" and all its chapters?`
+    );
+
+    if (!confirmed) return;
+
+    // Delete subject
+    subjects = subjects.filter(
+        s => s.id !== subjectId
+    );
+
+    // Delete related tests
+    tests = tests.filter(
+        test => test.subjectId !== subjectId
+    );
+
+    // Delete related study history
+    studyHistory = studyHistory.filter(
+        entry => entry.subjectId !== subjectId
+    );
+
+    saveData("subjects", subjects);
+    saveData("tests", tests);
+    saveData("studyHistory", studyHistory);
+
+    renderEverything();
+}
+
+
+function deleteChapter(chapterId) {
+
+    const result = findChapter(chapterId);
+
+    if (!result) return;
+
+    const confirmed = confirm(
+        `Delete "${result.chapter.name}"?`
+    );
+
+    if (!confirmed) return;
+
+    // Remove chapter from its subject
+    result.subject.chapters =
+        result.subject.chapters.filter(
+            chapter => chapter.id !== chapterId
+        );
+
+    // Delete related tests
+    tests = tests.filter(
+        test => test.chapterId !== chapterId
+    );
+
+    // Delete related study history
+    studyHistory = studyHistory.filter(
+        entry => entry.chapterId !== chapterId
+    );
+
+    saveData("subjects", subjects);
+    saveData("tests", tests);
+    saveData("studyHistory", studyHistory);
+
+    renderEverything();
+}
 
 // ---------- UPDATE CHAPTER DROPDOWNS ----------
 
@@ -817,16 +887,23 @@ function renderSubjects() {
 
         div.innerHTML = `
 
-            <strong>
-                ${subject.name}
-            </strong>
+    <strong>
+        ${subject.name}
+    </strong>
 
-            <span class="small">
-                ${subject.chapters.length}
-                chapter(s)
-            </span>
+    <span class="small">
+        ${subject.chapters.length} chapter(s)
+    </span>
 
-        `;
+    <br><br>
+
+    <button
+        onclick="deleteSubject('${subject.id}')"
+        class="delete-btn">
+        Delete Subject
+    </button>
+
+`;
 
         container.appendChild(div);
 
@@ -875,31 +952,38 @@ function renderChapters() {
 
             div.innerHTML = `
 
-                <strong>
-                    ${subject.name}
-                    — ${chapter.name}
-                </strong>
+    <strong>
+        ${subject.name} — ${chapter.name}
+    </strong>
 
-                <span class="small">
+    <span class="small">
 
-                    Strength:
-                    ${strengthText}
+        Strength:
+        ${strengthText}
 
-                    <br>
+        <br>
 
-                    Last studied:
-                    ${chapter.lastStudied || "Never"}
+        Last studied:
+        ${chapter.lastStudied || "Never"}
 
-                    <br>
+        <br>
 
-                    Last score:
-                    ${chapter.lastScore !== null
-                        ? chapter.lastScore + "%"
-                        : "None"}
+        Last score:
+        ${chapter.lastScore !== null
+            ? chapter.lastScore + "%"
+            : "None"}
 
-                </span>
+    </span>
 
-            `;
+    <br><br>
+
+    <button
+        onclick="deleteChapter('${chapter.id}')"
+        class="delete-btn">
+        Delete Chapter
+    </button>
+
+`;
 
             container.appendChild(
                 div
