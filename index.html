@@ -157,50 +157,69 @@
     <!-- ADD / RECORD TEST -->
     <!-- ============================= -->
 
-    <section class="card">
+  <!-- HOME TEST -->
+<section class="card">
+    <h2>📝 Home Test</h2>
+    <p class="small">Record a test you took and scored yourself.</p>
 
-        <h2>Add / Record Test</h2>
+    <select id="testSubject"></select>
 
-        <input
-            id="testName"
-            type="text"
-            placeholder="Test name (optional)">
+    <select id="testChapter"></select>
 
-        <select id="testSubject"></select>
+    <label>Test date</label>
+    <input id="testDate" type="date">
 
-        <select id="testChapter"></select>
+    <label>Score (optional)</label>
+    <input
+        id="testScore"
+        type="number"
+        min="0"
+        max="100"
+        placeholder="e.g. 78"
+    >
 
-        <label>Test date</label>
+    <label>Mistakes</label>
+    <input
+        id="testMistakes"
+        type="number"
+        min="0"
+        placeholder="Number of mistakes"
+    >
 
-        <input
-            id="testDate"
-            type="date">
+    <button onclick="addTest()">
+        Save Home Test
+    </button>
 
-        <label>Score (optional)</label>
+    <div id="testsList"></div>
+</section>
 
-        <input
-            id="testScore"
-            type="number"
-            min="0"
-            max="100"
-            placeholder="e.g. 78">
 
-        <label>Mistakes</label>
+<!-- SCHOOL TEST -->
+<section class="card">
+    <h2>📅 Upcoming School Test</h2>
+    <p class="small">Add a test/exam that is coming up at school.</p>
 
-        <input
-            id="testMistakes"
-            type="number"
-            min="0"
-            placeholder="Number of mistakes">
+    <input
+        id="upcomingTestName"
+        type="text"
+        placeholder="Test name (e.g. Maths Unit Test)"
+    >
 
-        <button onclick="addTest()">
-            Save Test
-        </button>
+    <label>Test date</label>
+    <input id="upcomingTestDate" type="date">
 
-        <div id="testsList"></div>
+    <label>Subject</label>
+    <select id="upcomingTestSubject"></select>
 
-    </section>
+    <label>Chapters included</label>
+    <div id="upcomingChapterList"></div>
 
+    <button onclick="addUpcomingTest()">
+        Save School Test
+    </button>
+
+    <div id="upcomingTestsList"></div>
+</section>
 
     <!-- ============================= -->
     <!-- LOG STUDY -->
