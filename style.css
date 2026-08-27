@@ -76,6 +76,13 @@ select {
     font-size: 14px;
 }
 
+label {
+    display: block;
+    font-size: 13px;
+    color: #555;
+    margin-bottom: 5px;
+}
+
 .form-row {
     display: flex;
     gap: 10px;
@@ -139,8 +146,82 @@ select {
 .good {
     color: #27ae60;
 }
+
 .delete-btn {
     background: #c0392b;
     padding: 7px 12px;
+    font-size: 13px;
+}
+
+
+/* ================================= */
+/* COLLAPSIBLE SUBJECTS              */
+/* ================================= */
+
+.subject-group {
+    border: 1px solid #ddd;
+    border-radius: 9px;
+    margin-top: 10px;
+    overflow: hidden;
+}
+
+.subject-header {
+    width: 100%;
+    background: #f7f7f7;
+    color: #222;
+    text-align: left;
+    padding: 14px;
+    border-radius: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.subject-header:hover {
+    background: #eeeeee;
+    opacity: 1;
+}
+
+.subject-header-left {
+    font-weight: bold;
+}
+
+.subject-header-right {
+    color: #777;
+    font-size: 13px;
+}
+
+.subject-chapters {
+    padding: 0 10px 10px;
+}
+
+.subject-chapters.hidden {
+    display: none;
+}
+
+.chapter-item {
+    background: white;
+    border: 1px solid #e5e5e5;
+    padding: 12px;
+    border-radius: 8px;
+    margin-top: 10px;
+}
+
+.empty-message {
+    padding: 12px;
+    color: #777;
+    font-size: 13px;
+}
+
+
+/* ================================= */
+/* UPCOMING TEST                     */
+/* ================================= */
+
+.upcoming-test {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 7px;
+    background: #fff4d6;
     font-size: 13px;
 }
