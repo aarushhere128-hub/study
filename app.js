@@ -9,14 +9,19 @@
 
 function loadData(key, fallback = []) {
 
-    const data = localStorage.getItem(key);
+    const data =
+        localStorage.getItem(key);
+
 
     if (!data) {
         return fallback;
     }
 
+
     try {
+
         return JSON.parse(data);
+
     } catch (error) {
 
         console.error(
@@ -47,6 +52,9 @@ let subjects =
 
 let tests =
     loadData("tests");
+
+let upcomingTests =
+    loadData("upcomingTests");
 
 let studyHistory =
     loadData("studyHistory");
@@ -261,15 +269,15 @@ function findChapter(chapterId) {
 
 
 // ==========================================
-// UPCOMING TESTS
+// SCHOOL TESTS
 // ==========================================
 
-function getUpcomingTests(chapterId) {
+function getUpcomingSchoolTests(chapterId) {
 
-    return tests
+    return upcomingTests
         .filter(test =>
 
-            test.chapterId === chapterId &&
+            test.chapterIds.includes(chapterId) &&
 
             daysUntil(test.date) >= 0
 
@@ -282,13 +290,14 @@ function getUpcomingTests(chapterId) {
 }
 
 
-function getNearestTest(chapterId) {
+function getNearestSchoolTest(chapterId) {
 
     const upcoming =
-        getUpcomingTests(chapterId);
+        getUpcomingSchoolTests(chapterId);
 
     return upcoming[0] || null;
 }
+
 
 
 // ==========================================
@@ -298,7 +307,7 @@ function getNearestTest(chapterId) {
 function getUpcomingTestBoost(chapterId) {
 
     const test =
-        getNearestTest(chapterId);
+        getNearestSchoolTest(chapterId);
 
     if (!test) {
         return 0;
@@ -736,9 +745,9 @@ function displayRecommendation(
 
 
     const test =
-        getNearestTest(
-            chapter.id
-        );
+    getNearestSchoolTest(
+        chapter.id
+    );
 
 
     let reasons = [];
@@ -963,9 +972,9 @@ function displayTestRecommendation(
     // --------------------------------------
 
     const upcoming =
-        getNearestTest(
-            chapter.id
-        );
+    getNearestSchoolTest(
+        chapter.id
+    );
 
 
     if (upcoming) {
@@ -1310,7 +1319,175 @@ function addTest() {
     );
 }
 
+// ==========================================
+// ADD SCHOOL TEST
+// ==========================================
 
+function addUpcomingTest() {
+
+    const name =
+        document
+            .getElementById("upcomingTestName")
+            .value
+            .trim();
+
+
+    const date =
+        document
+            .getElementById("upcomingTestDate")
+            .value;
+
+
+    const subjectId =
+        document
+            .getElementById("upcomingTestSubject")
+            .value;
+
+
+    const checkedChapters =
+        [
+            ...document.querySelectorAll(
+                "#upcomingChapterList input[type='checkbox']:checked"
+            )
+        ].map(
+            input => input.value
+        );
+
+
+    if (
+        !name ||
+        !date ||
+        !subjectId
+    ) {
+
+        alert(
+            "Enter the school test name, date and subject."
+        );
+
+        return;
+    }
+
+
+    if (
+        checkedChapters.length === 0
+    ) {
+
+        alert(
+            "Select at least one chapter."
+        );
+
+        return;
+    }
+
+
+    upcomingTests.push({
+
+        id: generateId(),
+
+        name: name,
+
+        date: date,
+
+        subjectId: subjectId,
+
+        chapterIds: checkedChapters
+
+    });
+
+
+    saveData(
+        "upcomingTests",
+        upcomingTests
+    );
+
+
+    document.getElementById(
+        "upcomingTestName"
+    ).value = "";
+
+
+    document.getElementById(
+        "upcomingTestDate"
+    ).value = "";
+
+
+    renderEverything();
+
+
+    alert(
+        "School test saved!"
+    );
+}
+// ==========================================
+// UPDATE SCHOOL TEST CHAPTER LIST
+// ==========================================
+
+function updateUpcomingChapterList() {
+
+    const subjectId =
+        document
+            .getElementById(
+                "upcomingTestSubject"
+            )
+            .value;
+
+
+    const container =
+        document.getElementById(
+            "upcomingChapterList"
+        );
+
+
+    container.innerHTML = "";
+
+
+    const subject =
+        subjects.find(
+            s => s.id === subjectId
+        );
+
+
+    if (!subject) {
+        return;
+    }
+
+
+    subject.chapters.forEach(
+        chapter => {
+
+            const label =
+                document.createElement(
+                    "label"
+                );
+
+
+            label.style.display =
+                "block";
+
+
+            label.style.marginBottom =
+                "8px";
+
+
+            label.innerHTML = `
+
+                <input
+                    type="checkbox"
+                    value="${chapter.id}"
+                >
+
+                ${chapter.name}
+
+            `;
+
+
+            container.appendChild(
+                label
+            );
+
+        }
+    );
+}
 // ==========================================
 // DELETE SUBJECT
 // ==========================================
@@ -1352,6 +1529,11 @@ function deleteSubject(
             test =>
                 test.subjectId !== subjectId
         );
+    upcomingTests =
+    upcomingTests.filter(
+        test =>
+            test.subjectId !== subjectId
+    );
 
 
     studyHistory =
@@ -1370,6 +1552,10 @@ function deleteSubject(
         "tests",
         tests
     );
+    saveData(
+    "upcomingTests",
+    upcomingTests
+);
 
     saveData(
         "studyHistory",
@@ -1423,6 +1609,22 @@ function deleteChapter(
             test =>
                 test.chapterId !== chapterId
         );
+    upcomingTests =
+    upcomingTests
+        .map(test => ({
+
+            ...test,
+
+            chapterIds:
+                test.chapterIds.filter(
+                    id => id !== chapterId
+                )
+
+        }))
+        .filter(
+            test =>
+                test.chapterIds.length > 0
+        );
 
 
     studyHistory =
@@ -1441,6 +1643,10 @@ function deleteChapter(
         "tests",
         tests
     );
+    saveData(
+    "upcomingTests",
+    upcomingTests
+);
 
     saveData(
         "studyHistory",
@@ -1720,13 +1926,15 @@ function updateSubjectDropdowns() {
 
     const selects = [
 
-        "chapterSubject",
+    "chapterSubject",
 
-        "testSubject",
+    "testSubject",
 
-        "studySubject"
+    "studySubject",
 
-    ];
+    "upcomingTestSubject"
+
+];
 
 
     selects.forEach(id => {
@@ -1790,12 +1998,14 @@ function updateSubjectDropdowns() {
         "testSubject",
         "testChapter"
     );
+    
 
 
     updateChapterDropdown(
         "studySubject",
         "studyChapter"
     );
+    updateUpcomingChapterList();
 }
 
 
@@ -2015,9 +2225,9 @@ function renderChapters() {
 
 
                         const upcoming =
-                            getNearestTest(
-                                chapter.id
-                            );
+    getNearestSchoolTest(
+        chapter.id
+    );
 
 
                         let upcomingHTML = "";
@@ -2392,6 +2602,12 @@ document
             );
 
         }
+    );
+document
+    .getElementById("upcomingTestSubject")
+    .addEventListener(
+        "change",
+        updateUpcomingChapterList
     );
 
 
