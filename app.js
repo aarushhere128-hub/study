@@ -12,11 +12,9 @@ function loadData(key, fallback = []) {
     const data =
         localStorage.getItem(key);
 
-
     if (!data) {
         return fallback;
     }
-
 
     try {
 
@@ -129,6 +127,10 @@ function addSubject() {
             "subjectName"
         );
 
+    if (!input) {
+        return;
+    }
+
     const name =
         input.value.trim();
 
@@ -168,21 +170,38 @@ function addSubject() {
 
 function addChapter() {
 
-    const subjectId =
+    const subjectSelect =
         document.getElementById(
             "chapterSubject"
-        ).value;
+        );
 
-    const name =
+    const nameInput =
         document.getElementById(
             "chapterName"
-        ).value.trim();
+        );
+
+    const strengthInput =
+        document.getElementById(
+            "chapterStrength"
+        );
+
+    if (
+        !subjectSelect ||
+        !nameInput ||
+        !strengthInput
+    ) {
+        return;
+    }
+
+    const subjectId =
+        subjectSelect.value;
+
+    const name =
+        nameInput.value.trim();
 
     const strength =
         Number(
-            document.getElementById(
-                "chapterStrength"
-            ).value
+            strengthInput.value
         );
 
     if (!subjectId) {
@@ -231,9 +250,7 @@ function addChapter() {
         subjects
     );
 
-    document.getElementById(
-        "chapterName"
-    ).value = "";
+    nameInput.value = "";
 
     renderEverything();
 }
@@ -271,12 +288,22 @@ function findChapter(chapterId) {
 // ==========================================
 // SCHOOL TESTS
 // ==========================================
+//
+// IMPORTANT:
+//
+// upcomingTests = School Tests / Exams
+//
+// tests = Home Tests
+//
+// These are intentionally separate.
+// ==========================================
 
-function getUpcomingSchoolTests(chapterId) {
+function getUpcomingTests(chapterId) {
 
     return upcomingTests
         .filter(test =>
 
+            test.chapterIds &&
             test.chapterIds.includes(chapterId) &&
 
             daysUntil(test.date) >= 0
@@ -290,24 +317,27 @@ function getUpcomingSchoolTests(chapterId) {
 }
 
 
-function getNearestSchoolTest(chapterId) {
+function getNearestUpcomingTest(chapterId) {
 
     const upcoming =
-        getUpcomingSchoolTests(chapterId);
+        getUpcomingTests(
+            chapterId
+        );
 
     return upcoming[0] || null;
 }
 
 
-
 // ==========================================
-// TEST PRIORITY BOOST
+// SCHOOL TEST PRIORITY BOOST
 // ==========================================
 
 function getUpcomingTestBoost(chapterId) {
 
     const test =
-        getNearestSchoolTest(chapterId);
+        getNearestUpcomingTest(
+            chapterId
+        );
 
     if (!test) {
         return 0;
@@ -386,7 +416,7 @@ function calculatePriority(chapter) {
 
 
     // --------------------------------------
-    // 3. UPCOMING TEST
+    // 3. SCHOOL TEST
     // --------------------------------------
 
     score +=
@@ -396,7 +426,7 @@ function calculatePriority(chapter) {
 
 
     // --------------------------------------
-    // 4. LOW TEST SCORE
+    // 4. LOW HOME TEST SCORE
     // --------------------------------------
 
     if (
@@ -425,7 +455,7 @@ function calculatePriority(chapter) {
 
 
 // ==========================================
-// TEST PRIORITY
+// HOME TEST PRIORITY
 // ==========================================
 
 function calculateTestPriority(chapter) {
@@ -440,7 +470,7 @@ function calculateTestPriority(chapter) {
 
 
     // --------------------------------------
-    // NEVER TESTED
+    // NEVER TESTED AT HOME
     // --------------------------------------
 
     if (chapterTests.length === 0) {
@@ -474,7 +504,7 @@ function calculateTestPriority(chapter) {
 
 
         // ----------------------------------
-        // PREVIOUS SCORE
+        // PREVIOUS HOME TEST SCORE
         // ----------------------------------
 
         if (
@@ -525,7 +555,7 @@ function calculateTestPriority(chapter) {
 
 
     // --------------------------------------
-    // UPCOMING TEST
+    // SCHOOL TEST
     // --------------------------------------
 
     score +=
@@ -543,10 +573,6 @@ function calculateTestPriority(chapter) {
 // ==========================================
 
 function sortByPriorityWithRandomTies(items) {
-
-    // Give every item a random value ONCE.
-    // This prevents entry order from deciding
-    // equal-priority chapters.
 
     items.forEach(item => {
 
@@ -736,6 +762,10 @@ function displayRecommendation(
             "recommendation"
         );
 
+    if (!box) {
+        return;
+    }
+
 
     const chapter =
         result.chapter;
@@ -745,9 +775,9 @@ function displayRecommendation(
 
 
     const test =
-    getNearestSchoolTest(
-        chapter.id
-    );
+        getNearestUpcomingTest(
+            chapter.id
+        );
 
 
     let reasons = [];
@@ -794,7 +824,7 @@ function displayRecommendation(
 
 
     // --------------------------------------
-    // UPCOMING TEST
+    // SCHOOL TEST
     // --------------------------------------
 
     if (test) {
@@ -802,10 +832,10 @@ function displayRecommendation(
         const days =
             daysUntil(test.date);
 
-        let testText =
+        const testText =
             test.name
                 ? `"${test.name}"`
-                : "an upcoming test";
+                : "an upcoming school test";
 
 
         if (days === 0) {
@@ -824,7 +854,7 @@ function displayRecommendation(
 
 
     // --------------------------------------
-    // LAST SCORE
+    // LAST HOME TEST SCORE
     // --------------------------------------
 
     if (
@@ -833,7 +863,7 @@ function displayRecommendation(
     ) {
 
         reasons.push(
-            `Your last score was ${chapter.lastScore}%.`
+            `Your last home test score was ${chapter.lastScore}%.`
         );
     }
 
@@ -882,7 +912,7 @@ function displayRecommendation(
 
 
 // ==========================================
-// TEST RECOMMENDATION DISPLAY
+// HOME TEST RECOMMENDATION DISPLAY
 // ==========================================
 
 function displayTestRecommendation(
@@ -893,6 +923,10 @@ function displayTestRecommendation(
         document.getElementById(
             "testRecommendation"
         );
+
+    if (!box) {
+        return;
+    }
 
 
     const chapter =
@@ -912,13 +946,13 @@ function displayTestRecommendation(
 
 
     // --------------------------------------
-    // TEST HISTORY
+    // HOME TEST HISTORY
     // --------------------------------------
 
     if (chapterTests.length === 0) {
 
         reasons.push(
-            "You haven't tested this chapter yet."
+            "You haven't tested this chapter at home yet."
         );
 
     } else {
@@ -939,7 +973,7 @@ function displayTestRecommendation(
         ) {
 
             reasons.push(
-                `Your last score was ${lastTest.score}%.`
+                `Your last home test score was ${lastTest.score}%.`
             );
         }
     }
@@ -968,13 +1002,13 @@ function displayTestRecommendation(
 
 
     // --------------------------------------
-    // UPCOMING TEST
+    // SCHOOL TEST
     // --------------------------------------
 
     const upcoming =
-    getNearestSchoolTest(
-        chapter.id
-    );
+        getNearestUpcomingTest(
+            chapter.id
+        );
 
 
     if (upcoming) {
@@ -988,17 +1022,21 @@ function displayTestRecommendation(
         if (days === 0) {
 
             reasons.push(
-                "You have an upcoming test today."
+                "You have a school test today."
             );
 
         } else {
 
             reasons.push(
-                `You have an upcoming test in ${days} day${days === 1 ? "" : "s"}.`
+                `You have a school test in ${days} day${days === 1 ? "" : "s"}.`
             );
         }
     }
 
+
+    // --------------------------------------
+    // DISPLAY
+    // --------------------------------------
 
     box.innerHTML = `
 
@@ -1008,7 +1046,7 @@ function displayTestRecommendation(
 
         <p>
             This is your highest-priority
-            chapter to test right now.
+            chapter to test at home right now.
         </p>
 
         <div class="reason">
@@ -1026,7 +1064,7 @@ function displayTestRecommendation(
         <br>
 
         <strong>
-            Test priority: ${result.score}
+            Home test priority: ${result.score}
         </strong>
 
     `;
@@ -1044,30 +1082,50 @@ function displayTestRecommendation(
 
 function logStudy() {
 
-    const subjectId =
+    const subjectElement =
         document.getElementById(
             "studySubject"
-        ).value;
+        );
 
-
-    const chapterId =
+    const chapterElement =
         document.getElementById(
             "studyChapter"
-        ).value;
+        );
 
+    const durationElement =
+        document.getElementById(
+            "studyDuration"
+        );
 
-    const duration =
-        Number(
-            document.getElementById(
-                "studyDuration"
-            ).value
+    const sessionElement =
+        document.getElementById(
+            "studySession"
         );
 
 
+    if (
+        !subjectElement ||
+        !chapterElement ||
+        !durationElement ||
+        !sessionElement
+    ) {
+        return;
+    }
+
+
+    const subjectId =
+        subjectElement.value;
+
+    const chapterId =
+        chapterElement.value;
+
+    const duration =
+        Number(
+            durationElement.value
+        );
+
     const session =
-        document.getElementById(
-            "studySession"
-        ).value;
+        sessionElement.value;
 
 
     if (!subjectId || !chapterId) {
@@ -1132,9 +1190,7 @@ function logStudy() {
     );
 
 
-    document.getElementById(
-        "studyDuration"
-    ).value = "";
+    durationElement.value = "";
 
 
     renderEverything();
@@ -1147,45 +1203,71 @@ function logStudy() {
 
 
 // ==========================================
-// ADD TEST
+// ADD HOME TEST
 // ==========================================
 
 function addTest() {
 
-    const testName =
+    const nameElement =
         document.getElementById(
             "testName"
-        ).value.trim();
+        );
 
-
-    const subjectId =
+    const subjectElement =
         document.getElementById(
             "testSubject"
-        ).value;
+        );
 
-
-    const chapterId =
+    const chapterElement =
         document.getElementById(
             "testChapter"
-        ).value;
+        );
 
-
-    const date =
+    const dateElement =
         document.getElementById(
             "testDate"
-        ).value;
+        );
 
-
-    const scoreInput =
+    const scoreElement =
         document.getElementById(
             "testScore"
-        ).value;
+        );
 
-
-    const mistakesInput =
+    const mistakesElement =
         document.getElementById(
             "testMistakes"
-        ).value;
+        );
+
+
+    if (
+        !nameElement ||
+        !subjectElement ||
+        !chapterElement ||
+        !dateElement ||
+        !scoreElement ||
+        !mistakesElement
+    ) {
+        return;
+    }
+
+
+    const testName =
+        nameElement.value.trim();
+
+    const subjectId =
+        subjectElement.value;
+
+    const chapterId =
+        chapterElement.value;
+
+    const date =
+        dateElement.value;
+
+    const scoreInput =
+        scoreElement.value;
+
+    const mistakesInput =
+        mistakesElement.value;
 
 
     if (
@@ -1216,7 +1298,11 @@ function addTest() {
 
     if (
         score !== null &&
-        (score < 0 || score > 100)
+        (
+            Number.isNaN(score) ||
+            score < 0 ||
+            score > 100
+        )
     ) {
 
         alert(
@@ -1229,7 +1315,10 @@ function addTest() {
 
     if (
         mistakes !== null &&
-        mistakes < 0
+        (
+            Number.isNaN(mistakes) ||
+            mistakes < 0
+        )
     ) {
 
         alert(
@@ -1239,6 +1328,10 @@ function addTest() {
         return;
     }
 
+
+    // --------------------------------------
+    // HOME TEST
+    // --------------------------------------
 
     tests.push({
 
@@ -1260,7 +1353,7 @@ function addTest() {
 
 
     // --------------------------------------
-    // UPDATE LAST SCORE
+    // UPDATE CHAPTER LAST HOME TEST SCORE
     // --------------------------------------
 
     if (score !== null) {
@@ -1291,33 +1384,22 @@ function addTest() {
     );
 
 
-    document.getElementById(
-        "testName"
-    ).value = "";
+    nameElement.value = "";
 
+    dateElement.value = "";
 
-    document.getElementById(
-        "testDate"
-    ).value = "";
+    scoreElement.value = "";
 
-
-    document.getElementById(
-        "testScore"
-    ).value = "";
-
-
-    document.getElementById(
-        "testMistakes"
-    ).value = "";
+    mistakesElement.value = "";
 
 
     renderEverything();
 
 
     alert(
-        "Test saved!"
+        "Home test saved!"
     );
-}
+            }
 
 // ==========================================
 // ADD SCHOOL TEST
@@ -1325,29 +1407,51 @@ function addTest() {
 
 function addUpcomingTest() {
 
-    const name =
-        document
-            .getElementById("upcomingTestName")
-            .value
-            .trim();
+    const nameElement =
+        document.getElementById(
+            "upcomingTestName"
+        );
 
+    const dateElement =
+        document.getElementById(
+            "upcomingTestDate"
+        );
+
+    const subjectElement =
+        document.getElementById(
+            "upcomingTestSubject"
+        );
+
+    const chapterContainer =
+        document.getElementById(
+            "upcomingChapterList"
+        );
+
+
+    if (
+        !nameElement ||
+        !dateElement ||
+        !subjectElement ||
+        !chapterContainer
+    ) {
+        return;
+    }
+
+
+    const name =
+        nameElement.value.trim();
 
     const date =
-        document
-            .getElementById("upcomingTestDate")
-            .value;
-
+        dateElement.value;
 
     const subjectId =
-        document
-            .getElementById("upcomingTestSubject")
-            .value;
+        subjectElement.value;
 
 
     const checkedChapters =
         [
-            ...document.querySelectorAll(
-                "#upcomingChapterList input[type='checkbox']:checked"
+            ...chapterContainer.querySelectorAll(
+                "input[type='checkbox']:checked"
             )
         ].map(
             input => input.value
@@ -1361,7 +1465,7 @@ function addUpcomingTest() {
     ) {
 
         alert(
-            "Enter the school test name, date and subject."
+            "Enter the test name, date and subject."
         );
 
         return;
@@ -1401,14 +1505,9 @@ function addUpcomingTest() {
     );
 
 
-    document.getElementById(
-        "upcomingTestName"
-    ).value = "";
+    nameElement.value = "";
 
-
-    document.getElementById(
-        "upcomingTestDate"
-    ).value = "";
+    dateElement.value = "";
 
 
     renderEverything();
@@ -1418,24 +1517,35 @@ function addUpcomingTest() {
         "School test saved!"
     );
 }
+
+
 // ==========================================
 // UPDATE SCHOOL TEST CHAPTER LIST
 // ==========================================
 
 function updateUpcomingChapterList() {
 
-    const subjectId =
-        document
-            .getElementById(
-                "upcomingTestSubject"
-            )
-            .value;
-
+    const subjectElement =
+        document.getElementById(
+            "upcomingTestSubject"
+        );
 
     const container =
         document.getElementById(
             "upcomingChapterList"
         );
+
+
+    if (
+        !subjectElement ||
+        !container
+    ) {
+        return;
+    }
+
+
+    const subjectId =
+        subjectElement.value;
 
 
     container.innerHTML = "";
@@ -1464,7 +1574,6 @@ function updateUpcomingChapterList() {
             label.style.display =
                 "block";
 
-
             label.style.marginBottom =
                 "8px";
 
@@ -1487,7 +1596,8 @@ function updateUpcomingChapterList() {
 
         }
     );
-}
+                        }
+
 // ==========================================
 // DELETE SUBJECT
 // ==========================================
@@ -1529,11 +1639,13 @@ function deleteSubject(
             test =>
                 test.subjectId !== subjectId
         );
+
+
     upcomingTests =
-    upcomingTests.filter(
-        test =>
-            test.subjectId !== subjectId
-    );
+        upcomingTests.filter(
+            test =>
+                test.subjectId !== subjectId
+        );
 
 
     studyHistory =
@@ -1552,10 +1664,11 @@ function deleteSubject(
         "tests",
         tests
     );
+
     saveData(
-    "upcomingTests",
-    upcomingTests
-);
+        "upcomingTests",
+        upcomingTests
+    );
 
     saveData(
         "studyHistory",
@@ -1609,22 +1722,25 @@ function deleteChapter(
             test =>
                 test.chapterId !== chapterId
         );
+
+
     upcomingTests =
-    upcomingTests
-        .map(test => ({
+        upcomingTests
+            .map(test => ({
 
-            ...test,
+                ...test,
 
-            chapterIds:
-                test.chapterIds.filter(
-                    id => id !== chapterId
-                )
+                chapterIds:
+                    test.chapterIds.filter(
+                        id =>
+                            id !== chapterId
+                    )
 
-        }))
-        .filter(
-            test =>
-                test.chapterIds.length > 0
-        );
+            }))
+            .filter(
+                test =>
+                    test.chapterIds.length > 0
+            );
 
 
     studyHistory =
@@ -1643,10 +1759,11 @@ function deleteChapter(
         "tests",
         tests
     );
+
     saveData(
-    "upcomingTests",
-    upcomingTests
-);
+        "upcomingTests",
+        upcomingTests
+    );
 
     saveData(
         "studyHistory",
@@ -1656,10 +1773,8 @@ function deleteChapter(
 
     renderEverything();
 }
-
-
 // ==========================================
-// DELETE TEST
+// DELETE HOME TEST
 // ==========================================
 
 function deleteTest(
@@ -1679,7 +1794,7 @@ function deleteTest(
 
     const confirmed =
         confirm(
-            "Delete this test record?"
+            "Delete this home test record?"
         );
 
 
@@ -1695,7 +1810,7 @@ function deleteTest(
 
 
     // --------------------------------------
-    // RECALCULATE LAST SCORE
+    // RECALCULATE LAST HOME TEST SCORE
     // --------------------------------------
 
     const chapterTests =
@@ -1704,7 +1819,9 @@ function deleteTest(
                 t =>
                     t.chapterId ===
                     test.chapterId &&
+
                     t.score !== null &&
+
                     t.score !== undefined
             )
             .sort(
@@ -1738,6 +1855,52 @@ function deleteTest(
     saveData(
         "subjects",
         subjects
+    );
+
+
+    renderEverything();
+}
+
+
+// ==========================================
+// DELETE SCHOOL TEST
+// ==========================================
+
+function deleteUpcomingTest(
+    testId
+) {
+
+    const test =
+        upcomingTests.find(
+            t => t.id === testId
+        );
+
+
+    if (!test) {
+        return;
+    }
+
+
+    const confirmed =
+        confirm(
+            "Delete this school test?"
+        );
+
+
+    if (!confirmed) {
+        return;
+    }
+
+
+    upcomingTests =
+        upcomingTests.filter(
+            t => t.id !== testId
+        );
+
+
+    saveData(
+        "upcomingTests",
+        upcomingTests
     );
 
 
@@ -1829,7 +1992,6 @@ function deleteStudySession(
     renderEverything();
 }
 
-
 // ==========================================
 // UPDATE CHAPTER DROPDOWN
 // ==========================================
@@ -1844,15 +2006,16 @@ function updateChapterDropdown(
             subjectSelectId
         );
 
-
     const chapterSelect =
         document.getElementById(
             chapterSelectId
         );
 
 
-    if (!subjectSelect ||
-        !chapterSelect) {
+    if (
+        !subjectSelect ||
+        !chapterSelect
+    ) {
 
         return;
     }
@@ -1926,15 +2089,15 @@ function updateSubjectDropdowns() {
 
     const selects = [
 
-    "chapterSubject",
+        "chapterSubject",
 
-    "testSubject",
+        "testSubject",
 
-    "studySubject",
+        "studySubject",
 
-    "upcomingTestSubject"
+        "upcomingTestSubject"
 
-];
+    ];
 
 
     selects.forEach(id => {
@@ -1998,16 +2161,16 @@ function updateSubjectDropdowns() {
         "testSubject",
         "testChapter"
     );
-    
 
 
     updateChapterDropdown(
         "studySubject",
         "studyChapter"
     );
+
+
     updateUpcomingChapterList();
 }
-
 
 // ==========================================
 // RENDER SUBJECTS
@@ -2019,6 +2182,11 @@ function renderSubjects() {
         document.getElementById(
             "subjectsList"
         );
+
+
+    if (!container) {
+        return;
+    }
 
 
     container.innerHTML = "";
@@ -2082,11 +2250,16 @@ function renderChapters() {
         );
 
 
+    if (!container) {
+        return;
+    }
+
+
     container.innerHTML = "";
 
 
     subjects.forEach(
-        (subject, subjectIndex) => {
+        subject => {
 
             const group =
                 document.createElement(
@@ -2144,10 +2317,6 @@ function renderChapters() {
                 "subject-chapters hidden";
 
 
-            // ----------------------------------
-            // TOGGLE
-            // ----------------------------------
-
             header.onclick = () => {
 
                 const isHidden =
@@ -2173,10 +2342,6 @@ function renderChapters() {
                         : "▶";
             };
 
-
-            // ----------------------------------
-            // CHAPTERS
-            // ----------------------------------
 
             if (
                 subject.chapters.length === 0
@@ -2225,9 +2390,9 @@ function renderChapters() {
 
 
                         const upcoming =
-    getNearestSchoolTest(
-        chapter.id
-    );
+                            getNearestUpcomingTest(
+                                chapter.id
+                            );
 
 
                         let upcomingHTML = "";
@@ -2244,7 +2409,7 @@ function renderChapters() {
                             const testName =
                                 upcoming.name
                                     ? upcoming.name
-                                    : "Upcoming Test";
+                                    : "School Test";
 
 
                             upcomingHTML = `
@@ -2252,6 +2417,7 @@ function renderChapters() {
                                 <div class="upcoming-test">
 
                                     📅
+
                                     <strong>
                                         ${testName}
                                     </strong>
@@ -2286,7 +2452,7 @@ function renderChapters() {
 
                                 <br>
 
-                                Last score:
+                                Last home test score:
                                 ${
                                     chapter.lastScore !== null &&
                                     chapter.lastScore !== undefined
@@ -2336,11 +2502,21 @@ function renderChapters() {
 
         }
     );
-}
-
+                    }
 
 // ==========================================
-// RENDER TESTS
+// RENDER HOME TESTS
+// ==========================================
+//
+// Compact dropdown format:
+//
+// Maths ▼
+//
+// Test Name
+// Date
+// Score
+// Mistakes
+//
 // ==========================================
 
 function renderTests() {
@@ -2351,18 +2527,130 @@ function renderTests() {
         );
 
 
+    if (!container) {
+        return;
+    }
+
+
     container.innerHTML = "";
 
 
-    tests
-        .slice()
-        .sort(
-            (a, b) =>
-                new Date(a.date) -
-                new Date(b.date)
-        )
-        .forEach(
-            test => {
+    if (tests.length === 0) {
+
+        container.innerHTML = `
+
+            <div class="empty-message">
+                No home tests recorded yet.
+            </div>
+
+        `;
+
+        return;
+    }
+
+
+    // Group tests by subject
+    subjects.forEach(subject => {
+
+        const subjectTests =
+            tests.filter(
+                test =>
+                    test.subjectId ===
+                    subject.id
+            );
+
+
+        if (subjectTests.length === 0) {
+            return;
+        }
+
+
+        const group =
+            document.createElement(
+                "div"
+            );
+
+
+        group.className =
+            "subject-group";
+
+
+        const header =
+            document.createElement(
+                "button"
+            );
+
+
+        header.className =
+            "subject-header";
+
+
+        header.innerHTML = `
+
+            <span class="subject-header-left">
+
+                <span class="arrow">
+                    ▶
+                </span>
+
+                ${subject.name}
+
+            </span>
+
+            <span class="subject-header-right">
+
+                ${subjectTests.length}
+                test${subjectTests.length === 1 ? "" : "s"}
+
+            </span>
+
+        `;
+
+
+        const testContainer =
+            document.createElement(
+                "div"
+            );
+
+
+        testContainer.className =
+            "subject-chapters hidden";
+
+
+        header.onclick = () => {
+
+            const isHidden =
+                testContainer.classList.contains(
+                    "hidden"
+                );
+
+
+            testContainer.classList.toggle(
+                "hidden"
+            );
+
+
+            const arrow =
+                header.querySelector(
+                    ".arrow"
+                );
+
+
+            arrow.textContent =
+                isHidden
+                    ? "▼"
+                    : "▶";
+        };
+
+
+        subjectTests
+            .slice()
+            .sort(
+                (a, b) =>
+                    new Date(b.date) -
+                    new Date(a.date)
+            )
+            .forEach(test => {
 
                 const result =
                     findChapter(
@@ -2388,24 +2676,20 @@ function renderTests() {
                 const testName =
                     test.name
                         ? test.name
-                        : "Test";
+                        : "Home Test";
 
 
                 div.innerHTML = `
 
                     <strong>
-
                         ${testName}
-
-                        <br>
-
-                        ${result.subject.name}
-                        —
-                        ${result.chapter.name}
-
                     </strong>
 
                     <span class="small">
+
+                        ${result.chapter.name}
+
+                        <br>
 
                         Date:
                         ${test.date}
@@ -2438,24 +2722,307 @@ function renderTests() {
                         class="delete-btn"
                         onclick="deleteTest('${test.id}')">
 
-                        Delete Test
+                        Delete Home Test
 
                     </button>
 
                 `;
 
 
-                container.appendChild(
+                testContainer.appendChild(
                     div
                 );
 
-            }
+            });
+
+
+        group.appendChild(
+            header
         );
+
+        group.appendChild(
+            testContainer
+        );
+
+
+        container.appendChild(
+            group
+        );
+
+    });
 }
 
 
 // ==========================================
-// RENDER HISTORY
+// RENDER SCHOOL TESTS
+// ==========================================
+//
+// Separate from Home Tests.
+//
+// Compact dropdown:
+//
+// Maths ▼
+//
+// Science Exam
+// 5 January 2026
+// Chapters: ...
+//
+// ==========================================
+
+function renderUpcomingTests() {
+
+    const container =
+        document.getElementById(
+            "upcomingTestsList"
+        );
+
+
+    if (!container) {
+        return;
+    }
+
+
+    container.innerHTML = "";
+
+
+    if (upcomingTests.length === 0) {
+
+        container.innerHTML = `
+
+            <div class="empty-message">
+                No upcoming school tests.
+            </div>
+
+        `;
+
+        return;
+    }
+
+
+    subjects.forEach(subject => {
+
+        const subjectTests =
+            upcomingTests
+                .filter(
+                    test =>
+                        test.subjectId ===
+                        subject.id
+                )
+                .sort(
+                    (a, b) =>
+                        new Date(a.date) -
+                        new Date(b.date)
+                );
+
+
+        if (subjectTests.length === 0) {
+            return;
+        }
+
+
+        const group =
+            document.createElement(
+                "div"
+            );
+
+
+        group.className =
+            "subject-group";
+
+
+        const header =
+            document.createElement(
+                "button"
+            );
+
+
+        header.className =
+            "subject-header";
+
+
+        header.innerHTML = `
+
+            <span class="subject-header-left">
+
+                <span class="arrow">
+                    ▶
+                </span>
+
+                ${subject.name}
+
+            </span>
+
+            <span class="subject-header-right">
+
+                ${subjectTests.length}
+                school test${subjectTests.length === 1 ? "" : "s"}
+
+            </span>
+
+        `;
+
+
+        const testContainer =
+            document.createElement(
+                "div"
+            );
+
+
+        testContainer.className =
+            "subject-chapters hidden";
+
+
+        header.onclick = () => {
+
+            const isHidden =
+                testContainer.classList.contains(
+                    "hidden"
+                );
+
+
+            testContainer.classList.toggle(
+                "hidden"
+            );
+
+
+            const arrow =
+                header.querySelector(
+                    ".arrow"
+                );
+
+
+            arrow.textContent =
+                isHidden
+                    ? "▼"
+                    : "▶";
+        };
+
+
+        subjectTests.forEach(test => {
+
+            const div =
+                document.createElement(
+                    "div"
+                );
+
+
+            div.className =
+                "item";
+
+
+            const chapterNames =
+                test.chapterIds
+                    .map(id => {
+
+                        const result =
+                            findChapter(id);
+
+                        return result
+                            ? result.chapter.name
+                            : null;
+
+                    })
+                    .filter(Boolean);
+
+
+            const days =
+                daysUntil(
+                    test.date
+                );
+
+
+            let dateText =
+                test.date;
+
+
+            if (days === 0) {
+
+                dateText +=
+                    " — Today";
+
+            } else if (days > 0) {
+
+                dateText +=
+                    ` — in ${days} day${days === 1 ? "" : "s"}`;
+
+            } else {
+
+                dateText +=
+                    " — Past";
+
+            }
+
+
+            div.innerHTML = `
+
+                <strong>
+                    ${test.name}
+                </strong>
+
+                <span class="small">
+
+                    ${dateText}
+
+                    <br>
+
+                    Chapters:
+                    ${
+                        chapterNames.length
+                            ? chapterNames.join(", ")
+                            : "None"
+                    }
+
+                </span>
+
+                <br><br>
+
+                <button
+                    class="delete-btn"
+                    onclick="deleteUpcomingTest('${test.id}')">
+
+                    Delete School Test
+
+                </button>
+
+            `;
+
+
+            testContainer.appendChild(
+                div
+            );
+
+        });
+
+
+        group.appendChild(
+            header
+        );
+
+        group.appendChild(
+            testContainer
+        );
+
+
+        container.appendChild(
+            group
+        );
+
+    });
+}
+
+
+// ==========================================
+// RENDER STUDY HISTORY
+// ==========================================
+//
+// Compact dropdown:
+//
+// Maths ▼
+//
+// 5 January 2026
+// Duration: 30 min
+// Tertiary
+//
 // ==========================================
 
 function renderHistory() {
@@ -2466,79 +3033,215 @@ function renderHistory() {
         );
 
 
+    if (!container) {
+        return;
+    }
+
+
     container.innerHTML = "";
 
 
-    studyHistory
-        .slice()
-        .reverse()
-        .slice(0, 20)
-        .forEach(
-            entry => {
+    if (studyHistory.length === 0) {
 
-                const result =
-                    findChapter(
-                        entry.chapterId
-                    );
+        container.innerHTML = `
 
+            <div class="empty-message">
+                No study sessions recorded yet.
+            </div>
 
-                if (!result) {
-                    return;
-                }
+        `;
+
+        return;
+    }
 
 
-                const div =
-                    document.createElement(
-                        "div"
-                    );
+    // --------------------------------------
+    // Group by subject
+    // --------------------------------------
+
+    subjects.forEach(subject => {
+
+        const subjectHistory =
+            studyHistory
+                .filter(
+                    entry =>
+                        entry.subjectId ===
+                        subject.id
+                )
+                .slice()
+                .sort(
+                    (a, b) =>
+                        new Date(b.date) -
+                        new Date(a.date)
+                )
+                .slice(0, 20);
 
 
-                div.className =
-                    "item";
+        if (subjectHistory.length === 0) {
+            return;
+        }
 
 
-                div.innerHTML = `
-
-                    <strong>
-
-                        ${result.subject.name}
-                        —
-                        ${result.chapter.name}
-
-                    </strong>
-
-                    <span class="small">
-
-                        ${entry.date}
-
-                        •
-                        ${entry.duration}
-                        minutes
-
-                        •
-                        ${capitalize(entry.session)}
-
-                    </span>
-
-                    <br><br>
-
-                    <button
-                        class="delete-btn"
-                        onclick="deleteStudySession('${entry.id}')">
-
-                        Delete Session
-
-                    </button>
-
-                `;
+        const group =
+            document.createElement(
+                "div"
+            );
 
 
-                container.appendChild(
-                    div
+        group.className =
+            "subject-group";
+
+
+        const header =
+            document.createElement(
+                "button"
+            );
+
+
+        header.className =
+            "subject-header";
+
+
+        header.innerHTML = `
+
+            <span class="subject-header-left">
+
+                <span class="arrow">
+                    ▶
+                </span>
+
+                ${subject.name}
+
+            </span>
+
+            <span class="subject-header-right">
+
+                ${subjectHistory.length}
+                session${subjectHistory.length === 1 ? "" : "s"}
+
+            </span>
+
+        `;
+
+
+        const historyContainer =
+            document.createElement(
+                "div"
+            );
+
+
+        historyContainer.className =
+            "subject-chapters hidden";
+
+
+        header.onclick = () => {
+
+            const isHidden =
+                historyContainer.classList.contains(
+                    "hidden"
                 );
 
+
+            historyContainer.classList.toggle(
+                "hidden"
+            );
+
+
+            const arrow =
+                header.querySelector(
+                    ".arrow"
+                );
+
+
+            arrow.textContent =
+                isHidden
+                    ? "▼"
+                    : "▶";
+        };
+
+
+        subjectHistory.forEach(entry => {
+
+            const result =
+                findChapter(
+                    entry.chapterId
+                );
+
+
+            if (!result) {
+                return;
             }
+
+
+            const div =
+                document.createElement(
+                    "div"
+                );
+
+
+            div.className =
+                "item";
+
+
+            div.innerHTML = `
+
+                <strong>
+
+                    ${result.chapter.name}
+
+                </strong>
+
+                <span class="small">
+
+                    ${entry.date}
+
+                    <br>
+
+                    Duration:
+                    ${entry.duration}
+                    min
+
+                    <br>
+
+                    Session:
+                    ${capitalize(entry.session)}
+
+                </span>
+
+                <br><br>
+
+                <button
+                    class="delete-btn"
+                    onclick="deleteStudySession('${entry.id}')">
+
+                    Delete Session
+
+                </button>
+
+            `;
+
+
+            historyContainer.appendChild(
+                div
+            );
+
+        });
+
+
+        group.appendChild(
+            header
         );
+
+        group.appendChild(
+            historyContainer
+        );
+
+
+        container.appendChild(
+            group
+        );
+
+    });
 }
 
 
@@ -2556,6 +3259,8 @@ function renderEverything() {
 
     renderTests();
 
+    renderUpcomingTests();
+
     renderHistory();
 }
 
@@ -2566,6 +3271,10 @@ function renderEverything() {
 
 function capitalize(text) {
 
+    if (!text) {
+        return "";
+    }
+
     return text.charAt(0).toUpperCase() +
         text.slice(1);
 }
@@ -2575,9 +3284,15 @@ function capitalize(text) {
 // DROPDOWN EVENTS
 // ==========================================
 
-document
-    .getElementById("testSubject")
-    .addEventListener(
+const testSubject =
+    document.getElementById(
+        "testSubject"
+    );
+
+
+if (testSubject) {
+
+    testSubject.addEventListener(
         "change",
         () => {
 
@@ -2589,10 +3304,18 @@ document
         }
     );
 
+}
 
-document
-    .getElementById("studySubject")
-    .addEventListener(
+
+const studySubject =
+    document.getElementById(
+        "studySubject"
+    );
+
+
+if (studySubject) {
+
+    studySubject.addEventListener(
         "change",
         () => {
 
@@ -2603,12 +3326,24 @@ document
 
         }
     );
-document
-    .getElementById("upcomingTestSubject")
-    .addEventListener(
+
+}
+
+
+const upcomingTestSubject =
+    document.getElementById(
+        "upcomingTestSubject"
+    );
+
+
+if (upcomingTestSubject) {
+
+    upcomingTestSubject.addEventListener(
         "change",
         updateUpcomingChapterList
     );
+
+}
 
 
 // ==========================================
