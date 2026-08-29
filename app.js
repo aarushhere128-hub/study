@@ -705,6 +705,22 @@ function getTestRecommendation() {
 
         subject.chapters.forEach(chapter => {
 
+            // --------------------------------------
+            // ONLY CONSIDER STUDIED CHAPTERS
+            // --------------------------------------
+
+            const hasStudySession =
+                studyHistory.some(
+                    entry =>
+                        entry.chapterId === chapter.id
+                );
+
+
+            if (!hasStudySession) {
+                return;
+            }
+
+
             ranked.push({
 
                 subject: subject,
@@ -723,10 +739,14 @@ function getTestRecommendation() {
     });
 
 
+    // --------------------------------------
+    // NO TESTS RECOMMENDED
+    // --------------------------------------
+
     if (ranked.length === 0) {
 
         alert(
-            "Add subjects and chapters first."
+            "No tests recommended. Study some chapters first!"
         );
 
         return;
