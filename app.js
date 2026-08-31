@@ -6,7 +6,9 @@
 // ==========================================
 // LOCAL STORAGE
 // ==========================================
-
+import {
+    syncStudyEngineData
+} from "./firebase-sync.js";
 function loadData(key, fallback = []) {
 
     const data =
@@ -3371,3 +3373,33 @@ if (upcomingTestSubject) {
 // ==========================================
 
 renderEverything();
+
+
+document
+    .getElementById("syncMistakeDB")
+    .addEventListener(
+        "click",
+        async () => {
+
+            try {
+
+                await syncStudyEngineData(
+                    subjects
+                );
+
+                alert(
+                    "Study Engine data synced with Mistake DB!"
+                );
+
+            } catch (error) {
+
+                console.error(error);
+
+                alert(
+                    "Failed to sync with Mistake DB."
+                );
+
+            }
+
+        }
+    );
