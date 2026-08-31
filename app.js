@@ -1,18 +1,24 @@
+// ==========================================
+// STUDY ENGINE
+// ==========================================
+
+// ==========================================
+// MISTAKE DB CONNECTION
+// ==========================================
+
 import {
     getMistakesFromDB
 } from "./firebase.js";
 
-// ==========================================
-// STUDY ENGINE
-// ==========================================
+import {
+    syncStudyEngineData
+} from "./firebase-sync.js";
 
 
 // ==========================================
 // LOCAL STORAGE
 // ==========================================
-import {
-    syncStudyEngineData
-} from "./firebase-sync.js";
+
 function loadData(key, fallback = []) {
 
     const data =
@@ -62,7 +68,13 @@ let upcomingTests =
 
 let studyHistory =
     loadData("studyHistory");
+
+
+// Mistakes come from Mistake DB.
+// They are NOT stored in Study Engine localStorage.
+
 let mistakes = [];
+
 
 // ==========================================
 // ID GENERATOR
@@ -294,15 +306,6 @@ function findChapter(chapterId) {
 // ==========================================
 // SCHOOL TESTS
 // ==========================================
-//
-// IMPORTANT:
-//
-// upcomingTests = School Tests / Exams
-//
-// tests = Home Tests
-//
-// These are intentionally separate.
-// ==========================================
 
 function getUpcomingTests(chapterId) {
 
@@ -335,7 +338,7 @@ function getNearestUpcomingTest(chapterId) {
 
 
 // ==========================================
-// SCHOOL TEST PRIORITY BOOST
+// SCHOOL TEST PRIORITY
 // ==========================================
 
 function getUpcomingTestBoost(chapterId) {
@@ -371,16 +374,28 @@ function getUpcomingTestBoost(chapterId) {
     return 5;
 }
 
+
+// ==========================================
+// LOAD MISTAKE DB
+// ==========================================
+
 async function loadMistakeData() {
 
     try {
 
-        mistakes =
+        const latestMistakes =
             await getMistakesFromDB();
+
+        mistakes =
+            Array.isArray(latestMistakes)
+                ? latestMistakes
+                : [];
 
         console.log(
             `Loaded ${mistakes.length} mistakes from Mistake DB.`
         );
+
+        return true;
 
     } catch (error) {
 
@@ -389,14 +404,16 @@ async function loadMistakeData() {
             error
         );
 
-        // Study Engine still works
-        // even if Mistake DB is unavailable.
-
         mistakes = [];
 
+        return false;
     }
-
 }
+
+
+// ==========================================
+// MISTAKE DB PRIORITY
+// ==========================================
 
 function getMistakeBoost(chapterId) {
 
@@ -414,11 +431,12 @@ function getMistakeBoost(chapterId) {
     }
 
 
-    // --------------------------------------
-    // MISTAKE COUNT
-    // --------------------------------------
-
     let boost = 0;
+
+
+    // --------------------------------------
+    // NUMBER OF MISTAKES
+    // --------------------------------------
 
     const count =
         chapterMistakes.length;
@@ -447,17 +465,13 @@ function getMistakeBoost(chapterId) {
     // REPEATED MISTAKES
     // --------------------------------------
 
-    const repeatedMistakes =
+    const repeatedCount =
         chapterMistakes.filter(
             mistake =>
                 Number(
                     mistake.timesRepeated || 0
                 ) > 0
-        );
-
-
-    const repeatedCount =
-        repeatedMistakes.length;
+        ).length;
 
 
     boost += Math.min(
@@ -479,23 +493,18 @@ function getMistakeBoost(chapterId) {
             mistake => {
 
                 if (!mistake.createdAt) {
-
                     return false;
-
                 }
-
 
                 const mistakeDate =
                     mistake.createdAt
                         .split("T")[0];
-
 
                 const days =
                     daysBetween(
                         mistakeDate,
                         today
                     );
-
 
                 return days <= 7;
 
@@ -511,8 +520,22 @@ function getMistakeBoost(chapterId) {
 
 
     return boost;
-
 }
+
+
+// ==========================================
+// GET MISTAKES FOR CHAPTER
+// ==========================================
+
+function getChapterMistakes(chapterId) {
+
+    return mistakes.filter(
+        mistake =>
+            mistake.chapterId === chapterId
+    );
+}
+
+
 // ==========================================
 // STUDY PRIORITY
 // ==========================================
@@ -595,14 +618,16 @@ function calculatePriority(chapter) {
 
         }
     }
-    // --------------------------------------
-// 5. MISTAKE DATABASE
-// --------------------------------------
 
-score +=
-    getMistakeBoost(
-        chapter.id
-    );
+
+    // --------------------------------------
+    // 5. MISTAKE DATABASE
+    // --------------------------------------
+
+    score +=
+        getMistakeBoost(
+            chapter.id
+        );
 
 
     return score;
@@ -620,12 +645,14 @@ function calculateTestPriority(chapter) {
 
     const chapterTests =
         tests.filter(
-            t => t.chapterId === chapter.id
+            t =>
+                t.chapterId ===
+                chapter.id
         );
 
 
     // --------------------------------------
-    // NEVER TESTED AT HOME
+    // NEVER TESTED
     // --------------------------------------
 
     if (chapterTests.length === 0) {
@@ -659,7 +686,7 @@ function calculateTestPriority(chapter) {
 
 
         // ----------------------------------
-        // PREVIOUS HOME TEST SCORE
+        // PREVIOUS TEST SCORE
         // ----------------------------------
 
         if (
@@ -717,6 +744,38 @@ function calculateTestPriority(chapter) {
         getUpcomingTestBoost(
             chapter.id
         );
+
+
+    // --------------------------------------
+    // MISTAKE DATABASE
+    // --------------------------------------
+
+    const chapterMistakes =
+        getChapterMistakes(
+            chapter.id
+        );
+
+
+    /*
+        Mistakes influence testing too.
+
+        This means:
+
+        Good previous score
+        + many mistakes
+
+        can STILL make the chapter
+        worth testing.
+    */
+
+    if (chapterMistakes.length > 0) {
+
+        score +=
+            getMistakeBoost(
+                chapter.id
+            );
+
+    }
 
 
     return score;
@@ -798,7 +857,11 @@ function rankChapters() {
 // WHAT SHOULD I STUDY?
 // ==========================================
 
-function getRecommendation(session) {
+async function getRecommendation(session) {
+
+    // Always get the latest Mistake DB data.
+    await loadMistakeData();
+
 
     const ranked =
         rankChapters();
@@ -851,7 +914,11 @@ function getRecommendation(session) {
 // WHAT SHOULD I TEST?
 // ==========================================
 
-function getTestRecommendation() {
+async function getTestRecommendation() {
+
+    // Always get the latest Mistake DB data.
+    await loadMistakeData();
+
 
     const ranked = [];
 
@@ -861,18 +928,21 @@ function getTestRecommendation() {
         subject.chapters.forEach(chapter => {
 
             // --------------------------------------
-            // ONLY CONSIDER STUDIED CHAPTERS
+            // ONLY STUDIED CHAPTERS
             // --------------------------------------
 
             const hasStudySession =
                 studyHistory.some(
                     entry =>
-                        entry.chapterId === chapter.id
+                        entry.chapterId ===
+                        chapter.id
                 );
 
 
             if (!hasStudySession) {
+
                 return;
+
             }
 
 
@@ -895,7 +965,7 @@ function getTestRecommendation() {
 
 
     // --------------------------------------
-    // NO TESTS RECOMMENDED
+    // NOTHING ELIGIBLE
     // --------------------------------------
 
     if (ranked.length === 0) {
@@ -951,6 +1021,12 @@ function displayRecommendation(
 
     const test =
         getNearestUpcomingTest(
+            chapter.id
+        );
+
+
+    const chapterMistakes =
+        getChapterMistakes(
             chapter.id
         );
 
@@ -1029,7 +1105,7 @@ function displayRecommendation(
 
 
     // --------------------------------------
-    // LAST HOME TEST SCORE
+    // HOME TEST SCORE
     // --------------------------------------
 
     if (
@@ -1044,13 +1120,28 @@ function displayRecommendation(
 
 
     // --------------------------------------
+    // MISTAKE DATABASE
+    // --------------------------------------
+
+    if (chapterMistakes.length > 0) {
+
+        reasons.push(
+            `${chapterMistakes.length} mistake${chapterMistakes.length === 1 ? "" : "s"} recorded in Mistake DB.`
+        );
+
+    }
+
+
+    // --------------------------------------
     // DISPLAY
     // --------------------------------------
 
     box.innerHTML = `
 
         <h3>
-            🎯 ${subject.name} — ${chapter.name}
+            🎯 ${escapeHTML(subject.name)}
+            —
+            ${escapeHTML(chapter.name)}
         </h3>
 
         <p>
@@ -1064,7 +1155,10 @@ function displayRecommendation(
             ${
                 reasons.length
                     ? reasons
-                        .map(r => `• ${r}`)
+                        .map(
+                            r =>
+                                `• ${escapeHTML(r)}`
+                        )
                         .join("<br>")
                     : "This chapter currently has the highest priority."
             }
@@ -1096,7 +1190,7 @@ function displayTestRecommendation(
 
     const box =
         document.getElementById(
-            "testRecommendation"
+          "testRecommendation"
         );
 
     if (!box) {
@@ -1113,7 +1207,15 @@ function displayTestRecommendation(
 
     const chapterTests =
         tests.filter(
-            t => t.chapterId === chapter.id
+            t =>
+                t.chapterId ===
+                chapter.id
+        );
+
+
+    const chapterMistakes =
+        getChapterMistakes(
+            chapter.id
         );
 
 
@@ -1210,13 +1312,28 @@ function displayTestRecommendation(
 
 
     // --------------------------------------
+    // MISTAKE DATABASE
+    // --------------------------------------
+
+    if (chapterMistakes.length > 0) {
+
+        reasons.push(
+            `${chapterMistakes.length} mistake${chapterMistakes.length === 1 ? "" : "s"} recorded in Mistake DB.`
+        );
+
+    }
+
+
+    // --------------------------------------
     // DISPLAY
     // --------------------------------------
 
     box.innerHTML = `
 
         <h3>
-            🧪 ${subject.name} — ${chapter.name}
+            🧪 ${escapeHTML(subject.name)}
+            —
+            ${escapeHTML(chapter.name)}
         </h3>
 
         <p>
@@ -1229,7 +1346,10 @@ function displayTestRecommendation(
             ${
                 reasons.length
                     ? reasons
-                        .map(r => `• ${r}`)
+                        .map(
+                            r =>
+                                `• ${escapeHTML(r)}`
+                        )
                         .join("<br>")
                     : "This chapter is due for testing."
             }
@@ -1465,7 +1585,7 @@ function addTest() {
             : Number(scoreInput);
 
 
-    const mistakes =
+    const mistakeCount =
         mistakesInput === ""
             ? null
             : Number(mistakesInput);
@@ -1489,10 +1609,10 @@ function addTest() {
 
 
     if (
-        mistakes !== null &&
+        mistakeCount !== null &&
         (
-            Number.isNaN(mistakes) ||
-            mistakes < 0
+            Number.isNaN(mistakeCount) ||
+            mistakeCount < 0
         )
     ) {
 
@@ -1503,10 +1623,6 @@ function addTest() {
         return;
     }
 
-
-    // --------------------------------------
-    // HOME TEST
-    // --------------------------------------
 
     tests.push({
 
@@ -1522,13 +1638,13 @@ function addTest() {
 
         score: score,
 
-        mistakes: mistakes
+        mistakes: mistakeCount
 
     });
 
 
     // --------------------------------------
-    // UPDATE CHAPTER LAST HOME TEST SCORE
+    // UPDATE LAST SCORE
     // --------------------------------------
 
     if (score !== null) {
@@ -1574,7 +1690,8 @@ function addTest() {
     alert(
         "Home test saved!"
     );
-            }
+}
+
 
 // ==========================================
 // ADD SCHOOL TEST
@@ -1629,7 +1746,8 @@ function addUpcomingTest() {
                 "input[type='checkbox']:checked"
             )
         ].map(
-            input => input.value
+            input =>
+                input.value
         );
 
 
@@ -1691,7 +1809,7 @@ function addUpcomingTest() {
     alert(
         "School test saved!"
     );
-}
+        }
 
 
 // ==========================================
@@ -1728,7 +1846,9 @@ function updateUpcomingChapterList() {
 
     const subject =
         subjects.find(
-            s => s.id === subjectId
+            s =>
+                s.id ===
+                subjectId
         );
 
 
@@ -1753,16 +1873,29 @@ function updateUpcomingChapterList() {
                 "8px";
 
 
-            label.innerHTML = `
+            const checkbox =
+                document.createElement(
+                    "input"
+                );
 
-                <input
-                    type="checkbox"
-                    value="${chapter.id}"
-                >
 
-                ${chapter.name}
+            checkbox.type =
+                "checkbox";
 
-            `;
+            checkbox.value =
+                chapter.id;
+
+
+            label.appendChild(
+                checkbox
+            );
+
+
+            label.appendChild(
+                document.createTextNode(
+                    ` ${chapter.name}`
+                )
+            );
 
 
             container.appendChild(
@@ -1771,7 +1904,8 @@ function updateUpcomingChapterList() {
 
         }
     );
-                        }
+}
+
 
 // ==========================================
 // DELETE SUBJECT
@@ -1783,7 +1917,9 @@ function deleteSubject(
 
     const subject =
         subjects.find(
-            s => s.id === subjectId
+            s =>
+                s.id ===
+                subjectId
         );
 
 
@@ -1805,28 +1941,33 @@ function deleteSubject(
 
     subjects =
         subjects.filter(
-            s => s.id !== subjectId
+            s =>
+                s.id !==
+                subjectId
         );
 
 
     tests =
         tests.filter(
             test =>
-                test.subjectId !== subjectId
+                test.subjectId !==
+                subjectId
         );
 
 
     upcomingTests =
         upcomingTests.filter(
             test =>
-                test.subjectId !== subjectId
+                test.subjectId !==
+                subjectId
         );
 
 
     studyHistory =
         studyHistory.filter(
             entry =>
-                entry.subjectId !== subjectId
+                entry.subjectId !==
+                subjectId
         );
 
 
@@ -1888,14 +2029,16 @@ function deleteChapter(
     result.subject.chapters =
         result.subject.chapters.filter(
             chapter =>
-                chapter.id !== chapterId
+                chapter.id !==
+                chapterId
         );
 
 
     tests =
         tests.filter(
             test =>
-                test.chapterId !== chapterId
+                test.chapterId !==
+                chapterId
         );
 
 
@@ -1908,7 +2051,8 @@ function deleteChapter(
                 chapterIds:
                     test.chapterIds.filter(
                         id =>
-                            id !== chapterId
+                            id !==
+                            chapterId
                     )
 
             }))
@@ -1921,7 +2065,8 @@ function deleteChapter(
     studyHistory =
         studyHistory.filter(
             entry =>
-                entry.chapterId !== chapterId
+                entry.chapterId !==
+                chapterId
         );
 
 
@@ -1948,6 +2093,8 @@ function deleteChapter(
 
     renderEverything();
 }
+
+
 // ==========================================
 // DELETE HOME TEST
 // ==========================================
@@ -1958,7 +2105,9 @@ function deleteTest(
 
     const test =
         tests.find(
-            t => t.id === testId
+            t =>
+                t.id ===
+                testId
         );
 
 
@@ -1980,12 +2129,14 @@ function deleteTest(
 
     tests =
         tests.filter(
-            t => t.id !== testId
+            t =>
+                t.id !==
+                testId
         );
 
 
     // --------------------------------------
-    // RECALCULATE LAST HOME TEST SCORE
+    // RECALCULATE LAST SCORE
     // --------------------------------------
 
     const chapterTests =
@@ -2047,7 +2198,9 @@ function deleteUpcomingTest(
 
     const test =
         upcomingTests.find(
-            t => t.id === testId
+            t =>
+                t.id ===
+                testId
         );
 
 
@@ -2069,7 +2222,9 @@ function deleteUpcomingTest(
 
     upcomingTests =
         upcomingTests.filter(
-            t => t.id !== testId
+            t =>
+                t.id !==
+                testId
         );
 
 
@@ -2093,7 +2248,9 @@ function deleteStudySession(
 
     const entry =
         studyHistory.find(
-            e => e.id === entryId
+            e =>
+                e.id ===
+                entryId
         );
 
 
@@ -2115,7 +2272,9 @@ function deleteStudySession(
 
     studyHistory =
         studyHistory.filter(
-            e => e.id !== entryId
+            e =>
+                e.id !==
+                entryId
         );
 
 
@@ -2167,6 +2326,8 @@ function deleteStudySession(
     renderEverything();
 }
 
+
+
 // ==========================================
 // UPDATE CHAPTER DROPDOWN
 // ==========================================
@@ -2209,7 +2370,9 @@ function updateChapterDropdown(
 
     const subject =
         subjects.find(
-            s => s.id === subjectId
+            s =>
+                s.id ===
+                subjectId
         );
 
 
@@ -2245,7 +2408,9 @@ function updateChapterDropdown(
 
     if (
         subject.chapters.some(
-            c => c.id === previous
+            c =>
+                c.id ===
+                previous
         )
     ) {
 
@@ -2278,7 +2443,9 @@ function updateSubjectDropdowns() {
     selects.forEach(id => {
 
         const select =
-            document.getElementById(id);
+            document.getElementById(
+                id
+            );
 
 
         if (!select) {
@@ -2320,7 +2487,9 @@ function updateSubjectDropdowns() {
 
         if (
             subjects.some(
-                s => s.id === previous
+                s =>
+                    s.id ===
+                    previous
             )
         ) {
 
@@ -2346,6 +2515,7 @@ function updateSubjectDropdowns() {
 
     updateUpcomingChapterList();
 }
+
 
 // ==========================================
 // RENDER SUBJECTS
@@ -2383,7 +2553,7 @@ function renderSubjects() {
             div.innerHTML = `
 
                 <strong>
-                    ${subject.name}
+                    ${escapeHTML(subject.name)}
                 </strong>
 
                 <span class="small">
@@ -2468,7 +2638,7 @@ function renderChapters() {
                         ▶
                     </span>
 
-                    ${subject.name}
+                    ${escapeHTML(subject.name)}
 
                 </span>
 
@@ -2570,7 +2740,8 @@ function renderChapters() {
                             );
 
 
-                        let upcomingHTML = "";
+                        let upcomingHTML =
+                            "";
 
 
                         if (upcoming) {
@@ -2594,7 +2765,7 @@ function renderChapters() {
                                     📅
 
                                     <strong>
-                                        ${testName}
+                                        ${escapeHTML(testName)}
                                     </strong>
 
                                     ${
@@ -2612,7 +2783,7 @@ function renderChapters() {
                         div.innerHTML = `
 
                             <strong>
-                                ${chapter.name}
+                                ${escapeHTML(chapter.name)}
                             </strong>
 
                             <span class="small">
@@ -2677,21 +2848,10 @@ function renderChapters() {
 
         }
     );
-                    }
+                }
 
 // ==========================================
 // RENDER HOME TESTS
-// ==========================================
-//
-// Compact dropdown format:
-//
-// Maths ▼
-//
-// Test Name
-// Date
-// Score
-// Mistakes
-//
 // ==========================================
 
 function renderTests() {
@@ -2724,7 +2884,6 @@ function renderTests() {
     }
 
 
-    // Group tests by subject
     subjects.forEach(subject => {
 
         const subjectTests =
@@ -2768,7 +2927,7 @@ function renderTests() {
                     ▶
                 </span>
 
-                ${subject.name}
+                ${escapeHTML(subject.name)}
 
             </span>
 
@@ -2857,12 +3016,12 @@ function renderTests() {
                 div.innerHTML = `
 
                     <strong>
-                        ${testName}
+                        ${escapeHTML(testName)}
                     </strong>
 
                     <span class="small">
 
-                        ${result.chapter.name}
+                        ${escapeHTML(result.chapter.name)}
 
                         <br>
 
@@ -2930,18 +3089,6 @@ function renderTests() {
 
 // ==========================================
 // RENDER SCHOOL TESTS
-// ==========================================
-//
-// Separate from Home Tests.
-//
-// Compact dropdown:
-//
-// Maths ▼
-//
-// Science Exam
-// 5 January 2026
-// Chapters: ...
-//
 // ==========================================
 
 function renderUpcomingTests() {
@@ -3023,7 +3170,7 @@ function renderUpcomingTests() {
                     ▶
                 </span>
 
-                ${subject.name}
+                ${escapeHTML(subject.name)}
 
             </span>
 
@@ -3131,7 +3278,7 @@ function renderUpcomingTests() {
             div.innerHTML = `
 
                 <strong>
-                    ${test.name}
+                    ${escapeHTML(test.name)}
                 </strong>
 
                 <span class="small">
@@ -3143,7 +3290,12 @@ function renderUpcomingTests() {
                     Chapters:
                     ${
                         chapterNames.length
-                            ? chapterNames.join(", ")
+                            ? chapterNames
+                                .map(
+                                    name =>
+                                        escapeHTML(name)
+                                )
+                                .join(", ")
                             : "None"
                     }
 
@@ -3185,19 +3337,8 @@ function renderUpcomingTests() {
     });
 }
 
-
 // ==========================================
 // RENDER STUDY HISTORY
-// ==========================================
-//
-// Compact dropdown:
-//
-// Maths ▼
-//
-// 5 January 2026
-// Duration: 30 min
-// Tertiary
-//
 // ==========================================
 
 function renderHistory() {
@@ -3229,10 +3370,6 @@ function renderHistory() {
         return;
     }
 
-
-    // --------------------------------------
-    // Group by subject
-    // --------------------------------------
 
     subjects.forEach(subject => {
 
@@ -3285,7 +3422,7 @@ function renderHistory() {
                     ▶
                 </span>
 
-                ${subject.name}
+                ${escapeHTML(subject.name)}
 
             </span>
 
@@ -3362,7 +3499,7 @@ function renderHistory() {
 
                 <strong>
 
-                    ${result.chapter.name}
+                    ${escapeHTML(result.chapter.name)}
 
                 </strong>
 
@@ -3456,6 +3593,41 @@ function capitalize(text) {
 
 
 // ==========================================
+// HTML SAFETY
+// ==========================================
+
+function escapeHTML(value) {
+
+    return String(value)
+
+        .replaceAll(
+            "&",
+            "&amp;"
+        )
+
+        .replaceAll(
+            "<",
+            "&lt;"
+        )
+
+        .replaceAll(
+            ">",
+            "&gt;"
+        )
+
+        .replaceAll(
+            '"',
+            "&quot;"
+        )
+
+        .replaceAll(
+            "'",
+            "&#039;"
+        );
+}
+
+
+// ==========================================
 // DROPDOWN EVENTS
 // ==========================================
 
@@ -3522,24 +3694,18 @@ if (upcomingTestSubject) {
 
 
 // ==========================================
-// INITIAL LOAD
+// MISTAKE DB SYNC
 // ==========================================
 
-async function initialize() {
-
-    await loadMistakeData();
-
-    renderEverything();
-
-}
+const syncMistakeDBButton =
+    document.getElementById(
+        "syncMistakeDB"
+    );
 
 
-initialize();
+if (syncMistakeDBButton) {
 
-
-document
-    .getElementById("syncMistakeDB")
-    .addEventListener(
+    syncMistakeDBButton.addEventListener(
         "click",
         async () => {
 
@@ -3549,13 +3715,17 @@ document
                     subjects
                 );
 
+                await loadMistakeData();
+
                 alert(
                     "Study Engine data synced with Mistake DB!"
                 );
 
             } catch (error) {
 
-                console.error(error);
+                console.error(
+                    error
+                );
 
                 alert(
                     "Failed to sync with Mistake DB."
@@ -3565,3 +3735,75 @@ document
 
         }
     );
+
+}
+
+
+// ==========================================
+// MAKE FUNCTIONS AVAILABLE TO HTML
+// ==========================================
+//
+// Because this file is loaded as a module,
+// functions are NOT automatically global.
+//
+// If your HTML uses:
+// onclick="addSubject()"
+// onclick="getRecommendation(...)"
+// etc.
+//
+// they must be attached to window.
+//
+
+window.addSubject =
+    addSubject;
+
+window.addChapter =
+    addChapter;
+
+window.logStudy =
+    logStudy;
+
+window.addTest =
+    addTest;
+
+window.addUpcomingTest =
+    addUpcomingTest;
+
+window.getRecommendation =
+    getRecommendation;
+
+window.getTestRecommendation =
+    getTestRecommendation;
+
+window.deleteSubject =
+    deleteSubject;
+
+window.deleteChapter =
+    deleteChapter;
+
+window.deleteTest =
+    deleteTest;
+
+window.deleteUpcomingTest =
+    deleteUpcomingTest;
+
+window.deleteStudySession =
+    deleteStudySession;
+
+
+// ==========================================
+// INITIAL LOAD
+// ==========================================
+
+async function initialize() {
+
+    // Load the latest Mistake DB data first.
+    await loadMistakeData();
+
+    // Load/render normal Study Engine data.
+    renderEverything();
+
+}
+
+
+initialize();
