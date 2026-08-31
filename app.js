@@ -1,3 +1,7 @@
+import {
+    getMistakesFromDB
+} from "./firebase.js";
+
 // ==========================================
 // STUDY ENGINE
 // ==========================================
@@ -58,7 +62,7 @@ let upcomingTests =
 
 let studyHistory =
     loadData("studyHistory");
-
+let mistakes = [];
 
 // ==========================================
 // ID GENERATOR
@@ -367,7 +371,148 @@ function getUpcomingTestBoost(chapterId) {
     return 5;
 }
 
+async function loadMistakeData() {
 
+    try {
+
+        mistakes =
+            await getMistakesFromDB();
+
+        console.log(
+            `Loaded ${mistakes.length} mistakes from Mistake DB.`
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Failed to load Mistake DB:",
+            error
+        );
+
+        // Study Engine still works
+        // even if Mistake DB is unavailable.
+
+        mistakes = [];
+
+    }
+
+}
+
+function getMistakeBoost(chapterId) {
+
+    const chapterMistakes =
+        mistakes.filter(
+            mistake =>
+                mistake.chapterId === chapterId
+        );
+
+
+    if (chapterMistakes.length === 0) {
+
+        return 0;
+
+    }
+
+
+    // --------------------------------------
+    // MISTAKE COUNT
+    // --------------------------------------
+
+    let boost = 0;
+
+    const count =
+        chapterMistakes.length;
+
+
+    if (count === 1) {
+
+        boost += 5;
+
+    } else if (count <= 3) {
+
+        boost += 10;
+
+    } else if (count <= 6) {
+
+        boost += 15;
+
+    } else {
+
+        boost += 20;
+
+    }
+
+
+    // --------------------------------------
+    // REPEATED MISTAKES
+    // --------------------------------------
+
+    const repeatedMistakes =
+        chapterMistakes.filter(
+            mistake =>
+                Number(
+                    mistake.timesRepeated || 0
+                ) > 0
+        );
+
+
+    const repeatedCount =
+        repeatedMistakes.length;
+
+
+    boost += Math.min(
+        repeatedCount * 10,
+        20
+    );
+
+
+    // --------------------------------------
+    // RECENT MISTAKES
+    // --------------------------------------
+
+    const today =
+        todayString();
+
+
+    const recentMistakes =
+        chapterMistakes.filter(
+            mistake => {
+
+                if (!mistake.createdAt) {
+
+                    return false;
+
+                }
+
+
+                const mistakeDate =
+                    mistake.createdAt
+                        .split("T")[0];
+
+
+                const days =
+                    daysBetween(
+                        mistakeDate,
+                        today
+                    );
+
+
+                return days <= 7;
+
+            }
+        );
+
+
+    if (recentMistakes.length > 0) {
+
+        boost += 5;
+
+    }
+
+
+    return boost;
+
+}
 // ==========================================
 // STUDY PRIORITY
 // ==========================================
@@ -450,6 +595,14 @@ function calculatePriority(chapter) {
 
         }
     }
+    // --------------------------------------
+// 5. MISTAKE DATABASE
+// --------------------------------------
+
+score +=
+    getMistakeBoost(
+        chapter.id
+    );
 
 
     return score;
@@ -3372,7 +3525,16 @@ if (upcomingTestSubject) {
 // INITIAL LOAD
 // ==========================================
 
-renderEverything();
+async function initialize() {
+
+    await loadMistakeData();
+
+    renderEverything();
+
+}
+
+
+initialize();
 
 
 document
