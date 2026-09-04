@@ -540,7 +540,7 @@ function getChapterMistakes(chapterId) {
 // STUDY PRIORITY
 // ==========================================
 
-function calculatePriority(chapter) {
+function calculatePriority(chapter, subject) {
 
     let score = 0;
 
@@ -628,6 +628,24 @@ function calculatePriority(chapter) {
         getMistakeBoost(
             chapter.id
         );
+        // --------------------------------------
+    // 6. SUBJECT BALANCE
+    // --------------------------------------
+
+    const subjectBoosts = {
+
+        "Maths": 5,
+
+        "Science": 5,
+
+        "SST": 5,
+
+        "Social Science": 5
+
+    };
+
+    score +=
+        subjectBoosts[subject.name] || 0;
 
 
     return score;
@@ -836,9 +854,10 @@ function rankChapters() {
                 chapter: chapter,
 
                 score:
-                    calculatePriority(
-                        chapter
-                    )
+    calculatePriority(
+        chapter,
+        subject
+    )
 
             });
 
